@@ -28,7 +28,7 @@ def train(train_loader, model, loss_fn, optimizer):
         optimizer.step()
 
         # Show progress
-        if batch % 100 == 0:
+        if batch % 10 == 0:
             loss, current = loss.item(), batch * len(X)
             print(f"train loss: {loss:>7f} [{current:>5d}/{len(train_loader.dataset):>5d}]")
 
