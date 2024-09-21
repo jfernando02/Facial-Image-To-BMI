@@ -139,7 +139,7 @@ if __name__ == "__main__":
     model = get_model().float().to(device)
     loss_fn = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-    epochs = 5
+    epochs = 10
     early_stopping = EarlyStopping(patience=5, verbose=True)
 
     for t in range(epochs):

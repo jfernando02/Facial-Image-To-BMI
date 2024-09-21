@@ -49,7 +49,7 @@ class RandomAdjustContrast(torch.nn.Module):
 
 # Helper class for Canny edge detection
 class CannyEdgeDetection(torch.nn.Module):
-    def __init__(self, threshold1=100, threshold2=200):
+    def __init__(self, threshold1=50, threshold2=100):
         super().__init__()
         self.threshold1 = threshold1
         self.threshold2 = threshold2
@@ -58,10 +58,18 @@ class CannyEdgeDetection(torch.nn.Module):
         img = np.array(to_pil_image(img))
         if img.ndim == 3 and img.shape[2] == 3:
             img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-        edges = cv2.Canny(img, self.threshold1, self.threshold2)
+        edges = self.auto_canny(img)
         edges = Image.fromarray(edges).convert('RGB')
         img = to_tensor(edges)
         return img
+
+    def auto_canny(self, img, sigma=0.33):
+        # compute the median of the single channel pixel intensities
+        v = np.median(img)
+        # apply automatic Canny edge detection using the computed median
+        lower = int(max(0, (1.0 - sigma) * v))
+        upper = int(min(255, (1.0 + sigma) * v))
+        return cv2.Canny(img, lower, upper)
 
 class GLCMTextureDetection(torch.nn.Module):
     def __init__(self, distances=[5], angles=[0], levels=256, symmetric=True, normed=True):
@@ -111,7 +119,7 @@ augmentation_transforms = T.Compose([
 
 #transforms for data augmentation and canny edge detection
 edge_detection_transforms = T.Compose([
-    CannyEdgeDetection(threshold1=100, threshold2=200)
+    CannyEdgeDetection()
 ])
 
 #transforms for data augmentation and GLCM texture detection
@@ -246,7 +254,7 @@ def train_val_test_split(dataset, augmented=True, vit_transformed=True, detectio
 def get_dataloaders(batch_size=16, augmented=True, vit_transformed=True, show_sample=False, detection=None):
     bmi_dataset = BMIDataset('../data/data.csv', '../data/Images', 'bmi', ToTensor())
     if show_sample:
-        train_dataset, val_dataset, test_dataset = train_val_test_split(bmi_dataset, augmented, vit_transformed=False)
+        train_dataset, val_dataset, test_dataset = train_val_test_split(bmi_dataset, augmented, vit_transformed, detection)
         show_sample_image(train_dataset)
     train_dataset, val_dataset, test_dataset = train_val_test_split(bmi_dataset, augmented, vit_transformed, detection)
 
@@ -260,5 +268,5 @@ def get_dataloaders(batch_size=16, augmented=True, vit_transformed=True, show_sa
 
 # for test
 if __name__ == "__main__":
-    get_dataloaders(augmented=False, show_sample=True)
-    get_dataloaders(augmented=True, show_sample=True)
+    get_dataloaders(augmented=False, vit_transformed=True, show_sample=True, detection="edge")
+    get_dataloaders(augmented=True, vit_transformed=True, show_sample=True, detection="edge")
