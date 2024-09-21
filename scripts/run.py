@@ -135,7 +135,7 @@ if __name__ == "__main__":
     parser.add_argument('--detection', type=str, default=None, help='set to edge to use edge detection, set to texture to use texture detection')
     args = parser.parse_args()
 
-    train_loader, val_loader, test_loader = get_dataloaders(16, augmented=args.augmented, vit_transformed=True, show_sample=False, detection=args.detection)
+    train_loader, val_loader, test_loader = get_dataloaders(256, augmented=args.augmented, vit_transformed=True, show_sample=False, detection=args.detection)
     model = get_model().float().to(device)
     loss_fn = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
