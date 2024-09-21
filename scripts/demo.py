@@ -9,10 +9,10 @@ from torchvision.transforms import ToTensor
 
 from models import get_model
 from loader import vit_transforms
+from scripts.loader import edge_detection_transforms, texture_detection_transforms
 
 
-
-def test_and_show(img_dir, weight_dir):
+def test_and_show(img_dir, weight_dir, preprocessing="None"):
     device = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
 
     # open and transform image for vit
@@ -20,6 +20,13 @@ def test_and_show(img_dir, weight_dir):
     if image.mode != 'RGB':
         image = image.convert('RGB')
     image = ToTensor()(image)
+    # if model trained on edge detection, use edge detection
+    if preprocessing == "CannyEdgeDetection":
+        image = edge_detection_transforms(image)
+    # if model trained on texture detection, use texture detection
+    if preprocessing == "GLCMTextureDetection":
+        image = texture_detection_transforms(image)
+
     image_vit = vit_transforms(image)
     image_vit = image_vit.unsqueeze(0)
     image_vit = image_vit.to(device)

@@ -99,7 +99,7 @@ class EarlyStopping:
         self.counter = 0
         self.best_score = None
         self.early_stop = False
-        self.val_loss_min = np.Inf
+        self.val_loss_min = np.inf
         self.delta = delta
 
     def __call__(self, val_loss, model):
@@ -132,13 +132,14 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--augmented', type=bool, default=False, help='set to True to use augmented dataset')
+    parser.add_argument('--detection', type=str, default=None, help='set to edge to use edge detection, set to texture to use texture detection')
     args = parser.parse_args()
 
-    train_loader, val_loader, test_loader = get_dataloaders(16, augmented=args.augmented, vit_transformed=True, show_sample=True)
+    train_loader, val_loader, test_loader = get_dataloaders(16, augmented=args.augmented, vit_transformed=True, show_sample=False, detection=args.detection)
     model = get_model().float().to(device)
     loss_fn = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-    epochs = 50
+    epochs = 5
     early_stopping = EarlyStopping(patience=5, verbose=True)
 
     for t in range(epochs):
