@@ -93,7 +93,7 @@ def test(test_loader, model):
 
 # helper class for early stopping
 class EarlyStopping:
-    def __init__(self, patience=5, verbose=False, delta=0):
+    def __init__(self, patience=5, verbose=False, delta=0, model_name=""):
         self.patience = patience
         self.verbose = verbose
         self.counter = 0
@@ -101,6 +101,7 @@ class EarlyStopping:
         self.early_stop = False
         self.val_loss_min = np.inf
         self.delta = delta
+        self.model_name = model_name
 
     def __call__(self, val_loss, model):
 
@@ -122,7 +123,7 @@ class EarlyStopping:
     def save_checkpoint(self, val_loss, model):
         if self.verbose:
             print(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
-        torch.save(model.state_dict(), '../weights/aug_epoch_7.pt')  # save checkpoint
+        torch.save(model.state_dict(), f'../weights/{self.model_name}_epoch.pt')  # save checkpoint
         self.val_loss_min = val_loss
 
 
@@ -139,8 +140,8 @@ if __name__ == "__main__":
     model = get_model().float().to(device)
     loss_fn = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-    epochs = 10
-    early_stopping = EarlyStopping(patience=5, verbose=True)
+    epochs = 3
+    early_stopping = EarlyStopping(patience=3, verbose=True, delta=0, model_name=args.detection)
 
     for t in range(epochs):
         print(f"Epoch {t + 1}\n-------------------------------")
