@@ -7,14 +7,13 @@ from PIL import Image
 from matplotlib import pyplot as plt
 
 import torch
-from torchvision.transforms import functional as F
+from torchvision.transforms import functional
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 from torch.utils.data import random_split
 from torchvision import transforms as T
 from torchvision.transforms import ToTensor, InterpolationMode
 from torchvision.transforms.functional import adjust_contrast, adjust_brightness, to_tensor, to_pil_image
-from skimage.feature import graycomatrix, graycoprops
 
 
 # helper class for random distortion
@@ -71,39 +70,39 @@ class CannyEdgeDetection(torch.nn.Module):
         upper = int(min(255, (1.0 + sigma) * v))
         return cv2.Canny(img, lower, upper)
 
-class GLCMTextureDetection(torch.nn.Module):
-    def __init__(self, distances=[5], angles=[0], levels=256, symmetric=True, normed=True):
+class Segmentation(torch.nn.Module):
+    def __init__(self, k=5):
         super().__init__()
-        self.distances = distances
-        self.angles = angles
-        self.levels = levels
-        self.symmetric = symmetric
-        self.normed = normed
+        self.k = k
 
     def forward(self, img):
+        # Convert to PIL image and then to numpy array
+        img = np.array(to_pil_image(img))
 
-        img = np.array(F.to_pil_image(img))
+        if img.ndim == 3 and img.shape[2] == 3:
+            # Reshaping the image to a 2D array of pixels
+            pixel_values = img.reshape((-1, 3))
+            pixel_values = np.float32(pixel_values)
 
-        if img.ndim == 3 and img.shape[2] == 3:  # If it's a 3-channel RGB image
-            img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)  # Convert to grayscale
+            # Define the criteria and apply kmeans()
+            criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.2)
+            _, labels, centers = cv2.kmeans(pixel_values, self.k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
 
-        glcm = graycomatrix(img, distances=self.distances, angles=self.angles,
-                            levels=self.levels, symmetric=self.symmetric, normed=self.normed)
+            # Convert back to 8-bit values
+            centers = np.uint8(centers)
+            labels = labels.flatten()
 
-        contrast = graycoprops(glcm, 'contrast')
-        dissimilarity = graycoprops(glcm, 'dissimilarity')
-        homogeneity = graycoprops(glcm, 'homogeneity')
-        energy = graycoprops(glcm, 'energy')
-        correlation = graycoprops(glcm, 'correlation')
+            # Convert all pixels to the color of the centroids
+            segmented_image = centers[labels.flatten()]
 
-        features = np.dstack((contrast, dissimilarity, homogeneity, energy, correlation))
-        features = np.squeeze(features, axis=(0, 1))  # Remove single-dimensional entries
+            # Reshape back to the original image dimension
+            segmented_image = segmented_image.reshape(img.shape)
+        else:
+            raise ValueError("Image is not in expected format or number of channels")
 
-        features = (features - np.min(features)) / (np.max(features) - np.min(features))  # Normalize features
-        features = (features * 255).astype(np.uint8)  # Scale to 0-255 range
-
-        features = Image.fromarray(features).convert('RGB')
-        img = F.to_tensor(features)
+        # Convert back to PIL Image and then to Tensor
+        segmented_image = Image.fromarray(segmented_image)
+        img = to_tensor(segmented_image)
 
         return img
 
@@ -112,7 +111,7 @@ augmentation_transforms = T.Compose([
     T.RandomRotation(5),
     T.RandomHorizontalFlip(p=0.5),
     RandomDistortion(probability=0.25, grid_width=2, grid_height=2, magnitude=8),
-    T.RandomApply([T.ColorJitter(brightness=(0.5, 1.5), contrast=(0.8, 1.2), saturation=(0.8, 1.2), hue=(0.0, 0.1))], p=1),
+    T.RandomApply([T.ColorJitter(brightness=(0.9, 1.1), contrast=(0.9, 1.1), saturation=(0.9, 1.1), hue=(0.0, 0.1))], p=1),
     RandomAdjustContrast(probability=0.5, min_factor=0.8, max_factor=1.2),
     T.Lambda(lambda img: adjust_brightness(img, torch.rand(1).item() + 0.5))
 ])
@@ -123,8 +122,8 @@ edge_detection_transforms = T.Compose([
 ])
 
 #transforms for data augmentation and GLCM texture detection
-texture_detection_transforms = T.Compose([
-    GLCMTextureDetection(distances=[5], angles=[0], levels=256, symmetric=True, normed=True)
+segmentation_transforms = T.Compose([
+    Segmentation()
 ])
 
 # transforms for vit
@@ -236,10 +235,10 @@ def train_val_test_split(dataset, augmented=True, vit_transformed=True, detectio
         val_dataset = TransformedDataset(val_dataset, edge_detection_transforms)
         test_dataset = TransformedDataset(test_dataset, edge_detection_transforms)
 
-    elif detection=="texture":
-        train_dataset = TransformedDataset(train_dataset, texture_detection_transforms)
-        val_dataset = TransformedDataset(val_dataset, texture_detection_transforms)
-        test_dataset = TransformedDataset(test_dataset, texture_detection_transforms)
+    elif detection=="segmentation":
+        train_dataset = TransformedDataset(train_dataset, segmentation_transforms)
+        val_dataset = TransformedDataset(val_dataset, segmentation_transforms)
+        test_dataset = TransformedDataset(test_dataset, segmentation_transforms)
 
     if vit_transformed:
         train_dataset = TransformedDataset(train_dataset)
@@ -268,5 +267,7 @@ def get_dataloaders(batch_size=16, augmented=True, vit_transformed=True, show_sa
 
 # for test
 if __name__ == "__main__":
+    get_dataloaders(augmented=False, vit_transformed=True, show_sample=True, detection="segmentation")
+    get_dataloaders(augmented=True, vit_transformed=True, show_sample=True, detection="segmentation")
     get_dataloaders(augmented=False, vit_transformed=True, show_sample=True, detection="edge")
     get_dataloaders(augmented=True, vit_transformed=True, show_sample=True, detection="edge")

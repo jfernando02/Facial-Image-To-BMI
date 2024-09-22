@@ -93,7 +93,7 @@ def test(test_loader, model):
 
 # helper class for early stopping
 class EarlyStopping:
-    def __init__(self, patience=5, verbose=False, delta=0, model_name=""):
+    def __init__(self, patience=5, verbose=False, delta=0, model_name="", isAugmented=False):
         self.patience = patience
         self.verbose = verbose
         self.counter = 0
@@ -102,6 +102,7 @@ class EarlyStopping:
         self.val_loss_min = np.inf
         self.delta = delta
         self.model_name = model_name
+        self.isAugmented = isAugmented
 
     def __call__(self, val_loss, model):
 
@@ -123,7 +124,7 @@ class EarlyStopping:
     def save_checkpoint(self, val_loss, model):
         if self.verbose:
             print(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
-        torch.save(model.state_dict(), f'../weights/{self.model_name}_epoch.pt')  # save checkpoint
+        torch.save(model.state_dict(), f'../weights/{self.model_name}_{self.isAugmented}_epoch.pt')  # save checkpoint
         self.val_loss_min = val_loss
 
 
@@ -133,7 +134,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--augmented', type=bool, default=False, help='set to True to use augmented dataset')
-    parser.add_argument('--detection', type=str, default=None, help='set to edge to use edge detection, set to texture to use texture detection')
+    parser.add_argument('--detection', type=str, default=None, help='set to edge to use edge detection, set to segmentation to use segmentation')
     args = parser.parse_args()
 
     train_loader, val_loader, test_loader = get_dataloaders(96, augmented=args.augmented, vit_transformed=True, show_sample=False, detection=args.detection)
@@ -141,7 +142,7 @@ if __name__ == "__main__":
     loss_fn = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     epochs = 3
-    early_stopping = EarlyStopping(patience=3, verbose=True, delta=0, model_name=args.detection)
+    early_stopping = EarlyStopping(patience=3, verbose=True, delta=0, model_name=args.detection, isAugmented=args.augmented)
 
     for t in range(epochs):
         print(f"Epoch {t + 1}\n-------------------------------")
@@ -153,7 +154,7 @@ if __name__ == "__main__":
             print("Early stopping")
             break
 
-    model.load_state_dict(torch.load('../weights/checkpoint.pt'))
+    model.load_state_dict(torch.load(f'../weights/{args.detection}_{args.augmented}_epoch.pt'))
     test(test_loader, model)
 
     print("Done!")
