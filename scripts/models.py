@@ -30,7 +30,7 @@ class BMIHead(nn.Module):
 
 class BMIHeadShallow(nn.Module):
     def __init__(self):
-        super(BMIHead, self).__init__()
+        super(BMIHeadShallow, self).__init__()
         self.linear1 = nn.Linear(1280, 320)
         self.linear2 = nn.Linear(320, 1)
         self.gelu = nn.GELU()
