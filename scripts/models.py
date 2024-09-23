@@ -28,14 +28,28 @@ class BMIHead(nn.Module):
         out = self.gelu(x)
         return out
 
+class BMIHeadShallow(nn.Module):
+    def __init__(self):
+        super(BMIHead, self).__init__()
+        self.linear1 = nn.Linear(1280, 320)
+        self.linear2 = nn.Linear(320, 1)
+        self.gelu = nn.GELU()
+        self.dropout = nn.Dropout(0.5)
 
+    def forward(self, x):
+        x = self.linear1(x)
+        x = self.gelu(x)
+        x = self.dropout(x)
+        x = self.linear2(x)
+        out = self.gelu(x)
+        return out
 
 def get_model():
     model = vit_h_14(weights='IMAGENET1K_SWAG_E2E_V1')
     for param in model.parameters():
         param.requires_grad = False
 
-    heads = BMIHead()
+    heads = BMIHeadShallow()
     model.heads = heads
 
     return model
