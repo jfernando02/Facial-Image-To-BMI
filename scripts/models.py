@@ -44,12 +44,15 @@ class BMIHeadShallow(nn.Module):
         out = self.gelu(x)
         return out
 
-def get_model():
+def get_model(modelType="deep"):
     model = vit_h_14(weights='IMAGENET1K_SWAG_E2E_V1')
     for param in model.parameters():
         param.requires_grad = False
 
-    heads = BMIHeadShallow()
+    if modelType=="deep":
+        heads = BMIHead()
+    else:
+        heads = BMIHeadShallow()
     model.heads = heads
 
     return model

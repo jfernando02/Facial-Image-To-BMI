@@ -135,10 +135,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--augmented', type=bool, default=False, help='set to True to use augmented dataset')
     parser.add_argument('--detection', type=str, default=None, help='set to edge to use edge detection, set to segmentation to use segmentation')
+    parser.add_argument('--modelType', type=str, default="deep", help='set to shallow to use shallow BMI model')
     args = parser.parse_args()
 
     train_loader, val_loader, test_loader = get_dataloaders(96, augmented=args.augmented, vit_transformed=True, show_sample=False, detection=args.detection)
-    model = get_model().float().to(device)
+    model = get_model(args.modelType).float().to(device)
     loss_fn = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     epochs = 2

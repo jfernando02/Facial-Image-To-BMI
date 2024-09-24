@@ -267,6 +267,8 @@ def get_dataloaders(batch_size=16, augmented=True, vit_transformed=True, show_sa
 
 # for test
 if __name__ == "__main__":
+    get_dataloaders(augmented=False, vit_transformed=True, show_sample=True, detection="none")
+    get_dataloaders(augmented=True, vit_transformed=True, show_sample=True, detection="none")
     get_dataloaders(augmented=False, vit_transformed=True, show_sample=True, detection="segmentation")
     get_dataloaders(augmented=True, vit_transformed=True, show_sample=True, detection="segmentation")
     get_dataloaders(augmented=False, vit_transformed=True, show_sample=True, detection="edge")
